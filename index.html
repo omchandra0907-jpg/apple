@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Om Chandra">
+  <meta name="description" content="Cybersecurity tools, write-ups, and learning resources — a student-built security hub.">
+  <title>Cyber Security Hub</title>
+
+  <!-- fonts — JetBrains Mono for code/headings, Inter for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- nav — styled like a terminal prompt bar -->
+  <nav class="site-nav">
+    <div class="nav-brand"></div>
+    <div class="nav-links">
+      <a href="#projects" class="active">projects</a>
+      <a href="#tools">tools</a>
+      <a href="#resources">resources</a>
+    </div>
+  </nav>
+
+  <!-- hero -->
+  <header class="hero">
+    <h1>
+      <span class="prompt">&gt;</span> OM CHANDRA <span class="cursor"></span>
+    </h1>
+    <p class="tagline"></p>
+    <p class="credit"></p>
+  </header>
+
+  <main class="content">
+
+    <!-- ===== PROJECTS ===== -->
+    <section id="projects">
+      <h2 class="section-heading">
+        <span class="prompt">&gt;_</span> Projects
+      </h2>
+
+      <div class="project-grid">
+
+        <a href="xss-lab/index1.html" class="project-card">
+          <span class="card-icon">💉</span>
+          <div class="card-title">Interactive XSS Vulnerability Lab</div>
+          <div class="card-desc">Simulate cookie exfiltration payloads and test HTML sanitization toggle defenses.</div>
+        </a>
+
+        <a href="brute-force/index2.html" class="project-card">
+          <span class="card-icon">🔓</span>
+          <div class="card-title">RockYou Wordlist Dictionary Attack Simulator</div>
+          <div class="card-desc">Simulate a wordlist dictionary attack with an automated rate-limiting lockout bypass.</div>
+        </a>
+
+        <a href="password-checker/index3.html" class="project-card">
+          <span class="card-icon">🔐</span>
+          <div class="card-title">Password Strength &amp; DB Hashing Visualizer</div>
+          <div class="card-desc">Evaluate entropy against NIST guidelines and simulate password hashing and salting.</div>
+        </a>
+
+        <a href="phishing-analyzer/index4.html" class="project-card">
+          <span class="card-icon">🎣</span>
+          <div class="card-title">Phishing Email Red-Flag Analyzer</div>
+          <div class="card-desc">Audit SPF/DKIM validation records and spot lookalike combosquatted sender domains.</div>
+        </a>
+
+        <a href="port-scanner/index5.html" class="project-card">
+          <span class="card-icon">🛡️</span>
+          <div class="card-title">Nmap Port Scan Terminal Log Viewer</div>
+          <div class="card-desc">Simulate network port reconnaissance scans, service banner grabbing, and filtering.</div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ===== TOOLS I'M LEARNING ===== -->
+    <section id="tools">
+      <h2 class="section-heading">
+        <span class="prompt">&gt;_</span> tools i'm learning
+      </h2>
+
+      <ul class="tools-list">
+        <li>Wireshark</li>
+        <li>Nmap</li>
+        <li>John the Ripper</li>
+        <li>Hashcat</li>
+        <li>CryptoJS</li>
+        <li>TryHackMe</li>
+        <li>Hack The Box</li>
+        <li>Linux CLI</li>
+      </ul>
+    </section>
+
+    <!-- ===== RESOURCES ===== -->
+    <section id="resources">
+      <h2 class="section-heading">
+        <span class="prompt">&gt;_</span> resources
+      </h2>
+
+      <div class="resources-grid">
+        <a href="https://tryhackme.com" target="_blank" class="resource-link">
+          TryHackMe — guided CTF labs
+          <span class="arrow">→</span>
+        </a>
+        <a href="https://www.hackthebox.com" target="_blank" class="resource-link">
+          Hack The Box — pentesting labs
+          <span class="arrow">→</span>
+        </a>
+
+        <a href="https://overthewire.org/wargames/" target="_blank" class="resource-link">
+          OverTheWire — wargame challenges
+          <span class="arrow">→</span>
+        </a>
+        <a href="https://cyberchef.org" target="_blank" class="resource-link">
+          CyberChef — data analysis toolkit
+          <span class="arrow">→</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+ 
+
+</body>
+</html>

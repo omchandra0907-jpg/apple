@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Om Chandra">
+  <meta name="description" content="Phishing email header and technical indicator analyzer — inspect SPF, DKIM, and lookalike domains.">
+  <title>Phishing Email Red-Flag Analyzer</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style4.css">
+</head>
+
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="nav-back">← back to hub</a>
+    <span class="nav-title">By Om Chandra</span>
+  </nav>
+
+  <main class="page-wrap">
+
+    <header class="page-header">
+      <h1><span class="prompt">&gt;</span> Phishing Email Red-Flag Analyzer</h1>
+    </header>
+
+    <div class="dashboard">
+      
+      <!-- INBOX SELECTION -->
+      <aside class="inbox-card">
+        <h2>📥 Select Mock Email</h2>
+        <div class="email-list" id="email-list">
+          <!-- Populated by JS -->
+        </div>
+      </aside>
+
+      <!-- INSPECTION & ANALYSIS WORKSPACE -->
+      <div class="workspace">
+        
+        <!-- Inspector Detail -->
+        <section class="inspector-card">
+          <h2>🔍 Email Inspector</h2>
+          <p style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">
+           
+          </p>
+
+          <div class="headers-table">
+            <div class="header-row">
+              <span class="header-lbl">From:</span>
+              <span class="header-val" id="hdr-from">-</span>
+            </div>
+            <div class="header-row">
+              <span class="header-lbl">Reply-To:</span>
+              <span class="header-val" id="hdr-reply">-</span>
+            </div>
+            <div class="header-row">
+              <span class="header-lbl">Date:</span>
+              <span class="header-val" id="hdr-date">-</span>
+            </div>
+            <div class="header-row">
+              <span class="header-lbl">SPF-Status:</span>
+              <span class="header-val" id="hdr-spf">-</span>
+            </div>
+            <div class="header-row">
+              <span class="header-lbl">DKIM-Status:</span>
+              <span class="header-val" id="hdr-dkim">-</span>
+            </div>
+            <div class="header-row">
+              <span class="header-lbl">DMARC-Status:</span>
+              <span class="header-val" id="hdr-dmarc">-</span>
+            </div>
+          </div>
+
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace;">
+            email body:
+          </p>
+          <div class="email-body" id="email-body">
+            Select an email from the inbox list to inspect...
+          </div>
+
+          <div class="analyze-action-row">
+            <button class="analyze-btn" id="btn-analyze" onclick="runSecurityAnalysis()" disabled>
+              Run Security Analysis
+            </button>
+          </div>
+        </section>
+
+        <!-- Analyst Notes -->
+        <section class="analyst-card">
+          <h2>📝 Analyst Notes</h2>
+          <div class="analyst-log" id="analyst-log">
+            <p style="color: var(--text-muted);">$ waiting for analysis to start...</p>
+          </div>
+
+          <div class="risk-meter">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">THREAT LEVEL</div>
+            <div class="score" id="risk-score">N/A</div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <script>
+    // Mock emails list representing realistic scenarios we learn in TryHackMe
+    const mockEmails = [
+      {
+        id: "email_1",
+        senderName: "Microsoft Support",
+        senderAddr: "billing@micros0ft.com", // Lookalike domain (0 instead of o)
+        replyTo: "support-helpdesk@gmail.com", // Sketchy reply-to
+        subject: "Action Required: Update your account billing details",
+        date: "June 25, 2026 10:15:30",
+        spf: "FAIL", // Sending IP is not authorized in Microsoft's real SPF
+        dkim: "FAIL", // Signature doesn't match/invalid
+        dmarc: "FAIL", // Alignment failed because SPF & DKIM failed
+        body: "Attention User,\n\nWe detected unusual login activity on your Microsoft account. To prevent account suspension, you must verify your identity immediately by clicking the link below:\n\nhttp://verification-microsoft-support.com/login\n\nFailure to act within 24 hours will result in permanent lockout.\n\nThanks,\nMicrosoft Security Team",
+        tag: "Suspicious"
+      },
+      {
+        id: "email_2",
+        senderName: "Chase Security Alert",
+        senderAddr: "chase-alert-team@chase-security-update.net", // Sketchy domain
+        replyTo: "chase-alert-team@chase-security-update.net",
+        subject: "URGENT: Your online access has been locked",
+        date: "June 24, 2026 14:02:11",
+        spf: "NONE", // No SPF policy configured for this domain
+        dkim: "NONE", // No DKIM signature found
+        dmarc: "NONE",
+        body: "Dear Customer,\n\nYour online banking access has been temporarily suspended due to multiple failed login attempts. We require you to confirm your card details and SSN to reactivate your online portal access.\n\nClick here to unlock your portal:\nhttps://chasebank-online-activation.net/portal\n\nDo not ignore this message.\n\nChase Fraud Prevention Department",
+        tag: "Suspicious"
+      },
+      {
+        id: "email_3",
+        senderName: "TryHackMe Newsletter",
+        senderAddr: "newsletter@tryhackme.com", // Real TryHackMe domain
+        replyTo: "newsletter@tryhackme.com",
+        subject: "New Room Alert: Learn Active Directory Exploitation!",
+        date: "June 23, 2026 09:30:00",
+        spf: "PASS", // Verified email sender IP
+        dkim: "PASS", // Cryptographic DKIM matches
+        dmarc: "PASS",
+        body: "Hey Hacker!\n\nWe just launched a brand new room covering the basics of Active Directory, Kerberoasting, and domain controller auditing. Head over to the platform and start hackin'!\n\nKeep learning,\nThe TryHackMe Team",
+        tag: "Legitimate"
+      },
+      {
+        id: "email_4",
+        senderName: "Google Security",
+        senderAddr: "no-reply@accounts.google.com", // Real Google domain
+        replyTo: "no-reply@accounts.google.com",
+        subject: "Security Alert: New sign-in on Windows PC",
+        date: "June 22, 2026 18:22:45",
+        spf: "PASS",
+        dkim: "PASS",
+        dmarc: "PASS",
+        body: "A new sign-in was detected on your Google account from a Windows machine located in Dallas, TX. If this was you, no action is needed. If you do not recognize this device, please secure your account immediately.\n\nBest,\nGoogle Account Security Team",
+        tag: "Legitimate"
+      }
+    ];
+
+    let selectedEmail = null;
+
+    // Load list into sidebar
+    function initInbox() {
+      const listDiv = document.getElementById("email-list");
+      listDiv.innerHTML = "";
+
+      mockEmails.forEach(email => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "email-item";
+        itemDiv.id = `item-${email.id}`;
+        
+        // Using structural elements so the layout looks like a student hand-coded it
+        itemDiv.innerHTML = `
+          <div class="item-sender">${email.senderName}</div>
+          <div class="item-subject">${email.subject}</div>
+          <span class="item-tag">${email.tag}</span>
+        `;
+        
+        itemDiv.onclick = () => selectEmail(email);
+        listDiv.appendChild(itemDiv);
+      });
+    }
+
+    // Handle email selection
+    function selectEmail(email) {
+      selectedEmail = email;
+
+      // Update active state in UI list
+      const items = document.querySelectorAll(".email-item");
+      items.forEach(it => it.classList.remove("active"));
+      document.getElementById(`item-${email.id}`).classList.add("active");
+
+      // Populate headers in inspector
+      document.getElementById("hdr-from").textContent = `${email.senderName} <${email.senderAddr}>`;
+      document.getElementById("hdr-reply").textContent = email.replyTo;
+      document.getElementById("hdr-date").textContent = email.date;
+      
+      const spfSpan = document.getElementById("hdr-spf");
+      spfSpan.textContent = email.spf;
+      spfSpan.className = "header-val " + getHeaderClass(email.spf);
+
+      const dkimSpan = document.getElementById("hdr-dkim");
+      dkimSpan.textContent = email.dkim;
+      dkimSpan.className = "header-val " + getHeaderClass(email.dkim);
+
+      const dmarcSpan = document.getElementById("hdr-dmarc");
+      dmarcSpan.textContent = email.dmarc;
+      dmarcSpan.className = "header-val " + getHeaderClass(email.dmarc);
+
+      // Populate email body text
+      document.getElementById("email-body").textContent = email.body;
+
+      // Reset analysis log & enable analyze button
+      const log = document.getElementById("analyst-log");
+      log.innerHTML = `<p style="color: var(--text-muted);"></p>`;
+      document.getElementById("risk-score").textContent = "N/A";
+      document.getElementById("risk-score").className = "score";
+      document.getElementById("btn-analyze").disabled = false;
+    }
+
+    function getHeaderClass(status) {
+      if (status === "PASS") return "pass";
+      if (status === "FAIL") return "fail";
+      return "warning";
+    }
+
+    // Dynamic security analysis script mimicking a manual analyst audit
+    function runSecurityAnalysis() {
+      if (!selectedEmail) return;
+
+      const log = document.getElementById("analyst-log");
+      log.innerHTML = ""; // Clear current log
+
+      log.innerHTML += `<p class="log-title">[SYSTEM] Initializing email header heuristic analysis...</p>`;
+      
+      let riskScore = 0; // Out of 10
+      let details = [];
+
+      // 1. Audit SPF, DKIM, and DMARC records
+      // Real cybersecurity check: SPF tells us if the sending mail server was authorized by the domain's TXT records
+      log.innerHTML += `<p>$ auditing authentication headers...</p>`;
+      
+      if (selectedEmail.spf === "FAIL") {
+        log.innerHTML += `<p class="flag-red">[-] SPF Authentication: FAILED (IP address unauthorized to send mail for domain)</p>`;
+        riskScore += 3;
+      } else if (selectedEmail.spf === "NONE") {
+        log.innerHTML += `<p class="flag-amber">[-] SPF Authentication: NONE (Domain lacks basic sender validation policy)</p>`;
+        riskScore += 2;
+      } else {
+        log.innerHTML += `<p class="flag-green">[+] SPF Authentication: PASS (Sending server authorized)</p>`;
+      }
+
+      // DKIM verifies that the email contents weren't modified in transit using asymmetric cryptography public keys
+      if (selectedEmail.dkim === "FAIL") {
+        log.innerHTML += `<p class="flag-red">[-] DKIM Cryptographic Signature: FAILED (Verification broken/compromised)</p>`;
+        riskScore += 3;
+      } else if (selectedEmail.dkim === "NONE") {
+        log.innerHTML += `<p class="flag-amber">[-] DKIM Cryptographic Signature: NONE (No digital signature present)</p>`;
+        riskScore += 2;
+      } else {
+        log.innerHTML += `<p class="flag-green">[+] DKIM Cryptographic Signature: PASS (Digital signature is authentic)</p>`;
+      }
+
+      // DMARC aligns SPF & DKIM and dictates policies for failed mail
+      if (selectedEmail.dmarc === "FAIL") {
+        log.innerHTML += `<p class="flag-red">[-] DMARC Alignment: FAILED (Alignment checking failed)</p>`;
+        riskScore += 1;
+      } else if (selectedEmail.dmarc === "PASS") {
+        log.innerHTML += `<p class="flag-green">[+] DMARC Alignment: PASS (Aligns with domain parameters)</p>`;
+      }
+
+      // 2. Lookalike Domain checking (Typosquatting/Combosquatting)
+      // I learned from security write-ups that attackers use lookalike names to confuse targets
+      log.innerHTML += `<p>$ auditing sender domain reputation...</p>`;
+      
+      const domain = selectedEmail.senderAddr.split('@')[1];
+      
+      // Let's check common lookalike flags sequentially
+      if (domain.includes('0') || domain.includes('rn') || domain.includes('vv') || domain.includes('rnicrosoft')) {
+        log.innerHTML += `<p class="flag-red">[-] TYPOSQUATTING ALERT: Detected lookalike characters (like 0 instead of o) in domain "${domain}"</p>`;
+        riskScore += 3;
+      } else if (domain.includes('chase-security') || domain.includes('verification-microsoft')) {
+        log.innerHTML += `<p class="flag-amber">[-] COMBOSQUATTING ALERT: Sender domain uses a compound brand name "${domain}"</p>`;
+        riskScore += 2;
+      } else if (domain.endsWith('.net') && (domain.includes('chase') || domain.includes('support'))) {
+        log.innerHTML += `<p class="flag-amber">[-] DOMAIN TLD EXPLOIT: Domain uses uncommon TLD (.net) for financial/tech brand</p>`;
+        riskScore += 1;
+      } else {
+        log.innerHTML += `<p class="flag-green">[+] Sender domain "${domain}" appears to match standard naming conventions</p>`;
+      }
+
+      // 3. Sender / Reply-to mismatch check
+      // Real phishing emails often have mismatching reply-to headers so they can capture user replies on standard accounts
+      if (selectedEmail.replyTo !== selectedEmail.senderAddr) {
+        log.innerHTML += `<p class="flag-red">[-] HEADER MISMATCH: Sender address doesn't match Reply-To address! (Replies redirected to: ${selectedEmail.replyTo})</p>`;
+        riskScore += 2;
+      }
+
+      // 4. Body Content inspection
+      // Checking for social engineering indicators: urgency, lockouts, credentials, and suspicious URLs
+      log.innerHTML += `<p>$ auditing email content body...</p>`;
+      const lowercaseBody = selectedEmail.body.toLowerCase();
+      
+      const urgentWords = ["urgent", "immediately", "action required", "hours", "lockout", "suspension", "verify your identity"];
+      let urgentHits = 0;
+      urgentWords.forEach(word => {
+        if (lowercaseBody.includes(word)) urgentHits++;
+      });
+
+      if (urgentHits >= 3) {
+        log.innerHTML += `<p class="flag-red">[-] SOCIAL ENGINEERING: High density of urgent/threatening language (${urgentHits} matches)</p>`;
+        riskScore += 2;
+      } else if (urgentHits > 0) {
+        log.innerHTML += `<p class="flag-amber">[-] SOCIAL ENGINEERING: Subtle sense of urgency detected</p>`;
+        riskScore += 1;
+      }
+
+      // Analyze hyperlinks in email body
+      if (lowercaseBody.includes('http://') && !lowercaseBody.includes('https://')) {
+        log.innerHTML += `<p class="flag-red">[-] UNENCRYPTED HYPERLINK: Contains unsafe plain HTTP links inside email body</p>`;
+        riskScore += 2;
+      }
+
+      // Cap risk score at 10
+      riskScore = Math.min(riskScore, 10);
+
+      // Render Threat level in analyst meter
+      const meter = document.getElementById("risk-score");
+      meter.textContent = `${riskScore} / 10`;
+
+      if (riskScore <= 2) {
+        meter.className = "score low";
+        log.innerHTML += `<p style="color: var(--accent-green); font-weight: bold; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 8px;">[VERDICT] Safe. Minimal indicators detected.</p>`;
+      } else if (riskScore <= 5) {
+        meter.className = "score medium";
+        log.innerHTML += `<p style="color: var(--accent-amber); font-weight: bold; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 8px;">[VERDICT] Suspicious. Threat markers present. Verify sender manually.</p>`;
+      } else {
+        meter.className = "score high";
+        log.innerHTML += `<p style="color: var(--accent-red); font-weight: bold; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 8px;">[VERDICT] Critical. High probability of phishing/domain spoofing. Block sender immediately.</p>`;
+      }
+
+      // Auto scroll to bottom
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Initialize the inbox list on page load
+    initInbox();
+
+    // Auto-select first email for better initial appearance
+    selectEmail(mockEmails[0]);
+  </script>
+
+</body>
+</html>

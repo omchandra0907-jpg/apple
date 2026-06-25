@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Om Chandra">
+  <meta name="description" content="Dictionary attack simulator — see how common passwords get cracked in seconds.">
+  <title>Brute Force Simulator — Dictionary Attack</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style2.css">
+</head>
+
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="nav-back">← back to hub</a>
+    <span class="nav-title">By Om Chandra</span>
+  </nav>
+
+  <main class="page-wrap">
+
+    <header class="page-header">
+      <h1><span class="prompt">&gt;</span> Dictionary Attack Simulator</h1>
+
+    </header>
+
+    <section class="card">
+      <h2>🔓 Set Target Password</h2>
+      <p>Enter a password below, then hit "run attack" to see if it's in the top 50 most common passwords.
+      </p>
+
+      <div class="input-row">
+        <input type="text" id="target-password" placeholder="enter target password...">
+        <button class="attack-btn" id="attack-btn" onclick="startAttack()">run attack</button>
+        <button class="stop-btn" onclick="stopAttack()">stop</button>
+      </div>
+    </section>
+
+    <!-- status -->
+    <div class="status-bar" id="attack-status">
+      STATUS: IDLE
+    </div>
+
+    <!-- progress -->
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-bar"></div>
+    </div>
+
+    <!-- stats -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="val" id="stat-tried">0</div>
+        <div class="lbl">Tried</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="stat-total">50</div>
+        <div class="lbl">Wordlist Size</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="stat-speed">—</div>
+        <div class="lbl">Speed</div>
+      </div>
+    </div>
+
+    <!-- attack log -->
+    <div class="log-terminal">
+      <div class="terminal-bar">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="label">attack-log</span>
+      </div>
+      <div class="log-body" id="attack-log">
+
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+
+    // Using the famous rockyou.txt list here because it's a security classic
+    const wordlist = [
+      '123456', 'password', '123456789', '12345678', '12345',
+      '1234567', '1234567890', 'qwerty', 'abc123', 'password1',
+      'million', '000000', 'iloveyou', 'aaron431', 'password123',
+      'qqww1122', '123123', 'monkey', 'dragon', 'master',
+      'qwertyuiop', 'login', 'princess', 'football', 'shadow',
+      'sunshine', 'trustno1', 'letmein', '696969', 'batman',
+      'charlie', 'donald', 'michael', 'starwars', 'admin',
+      'welcome', 'hello', 'freedom', 'whatever', 'ninja',
+      'mustang', 'access', 'flower', 'hottie', 'loveme',
+      'amanda', 'zaq1zaq1', 'jesus', '654321', '!@#$%^&*'
+    ];
+
+    let attackTimeout = null;
+    let currentIndex = 0;
+    let attemptsCount = 0;
+    let startTime = null;
+    let target = "";
+
+    function startAttack() {
+      target = document.getElementById('target-password').value;
+      if (!target) {
+        alert('enter a target password first');
+        return;
+      }
+
+      // reset tracking variables
+      currentIndex = 0;
+      attemptsCount = 0;
+      startTime = Date.now();
+
+      let log = document.getElementById('attack-log');
+      let status = document.getElementById('attack-status');
+      let progressBar = document.getElementById('progress-bar');
+
+      log.innerHTML = '';
+      progressBar.style.width = '0%';
+      progressBar.classList.remove('found');
+
+      status.textContent = 'STATUS: SCANNING...';
+      status.style.color = '#fbbf24';
+
+      document.getElementById('attack-btn').disabled = true;
+      document.getElementById('stat-tried').textContent = '0';
+      document.getElementById('stat-speed').textContent = '~12/s';
+
+      log.innerHTML += '<p style="color: var(--accent-amber)">$ starting dictionary attack against target...</p>';
+      log.innerHTML += '<p style="color: var(--text-muted)">$ wordlist loaded: 50 keys (rockyou.txt subset)</p><br>';
+
+      // Start scanning using a recursive setTimeout pattern for dynamic timeouts (like rate limits!)
+      runScanStep();
+    }
+
+    function runScanStep() {
+      if (currentIndex >= wordlist.length) {
+        let elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        let status = document.getElementById('attack-status');
+        let log = document.getElementById('attack-log');
+
+        status.textContent = 'STATUS: NO MATCH FOUND';
+        status.style.color = '#f87171';
+        log.innerHTML += `<br><p class="no-match">✗ password not in wordlist (${elapsed}s elapsed)</p>`;
+        log.innerHTML += '<p style="color: var(--text-muted)">$ tip: if it is not in the top 50, that is already better than most users</p>';
+        document.getElementById('attack-btn').disabled = false;
+        return;
+      }
+
+      let attempt = wordlist[currentIndex];
+      let match = attempt === target;
+
+      attemptsCount++;
+      document.getElementById('stat-tried').textContent = attemptsCount;
+
+      // update progress percentage bar
+      let pct = ((currentIndex + 1) / wordlist.length * 100).toFixed(0);
+      document.getElementById('progress-bar').style.width = pct + '%';
+
+      let log = document.getElementById('attack-log');
+      let status = document.getElementById('attack-status');
+
+      if (match) {
+        // PASSWORD CRACKED!
+        log.innerHTML += `<p class="match">✓ [${String(attemptsCount).padStart(2, '0')}] "${attempt}" ← PASSWORD FOUND!</p>`;
+        document.getElementById('progress-bar').classList.add('found');
+
+        let elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        status.textContent = `STATUS: CRACKED IN ${elapsed}s — "${attempt}"`;
+        status.style.color = '#4ade80';
+
+        log.innerHTML += `<br><p style="color: var(--accent-green)">$ cracked in ${elapsed} seconds</p>`;
+        log.innerHTML += '<p style="color: var(--accent-amber)">$ this is why you do not use common passwords in your profiles!</p>';
+        document.getElementById('attack-btn').disabled = false;
+        return;
+      }
+
+      log.innerHTML += `<p class="attempt">[${String(attemptsCount).padStart(2, '0')}] trying "<span class="word">${attempt}</span>"</p>`;
+      log.scrollTop = log.scrollHeight;
+
+      currentIndex++;
+
+      // Simulating rate limiting threshold: every 5 attempts, lockout security triggers!
+      if (attemptsCount > 0 && attemptsCount % 5 === 0) {
+        log.innerHTML += `<p style="color: var(--accent-red); font-weight: bold; margin: 4px 0;">[!] STATUS 429: Too Many Requests. Simulating a 2-second rate-limiting bypass...</p>`;
+        log.scrollTop = log.scrollHeight;
+        status.textContent = 'STATUS: 429 TOO MANY REQUESTS';
+        status.style.color = '#f87171';
+        document.getElementById('stat-speed').textContent = '0/s (Locked)';
+
+        // Wait 2000ms (2 seconds) to simulate the server timeout lockout reset, then continue the scan
+        attackTimeout = setTimeout(() => {
+          status.textContent = 'STATUS: SCANNING...';
+          status.style.color = '#fbbf24';
+          document.getElementById('stat-speed').textContent = '~12/s';
+          runScanStep();
+        }, 2000);
+      } else {
+        // Normal attack cycle delay of 80ms
+        attackTimeout = setTimeout(runScanStep, 80);
+      }
+    }
+
+    function stopAttack() {
+      if (attackTimeout) {
+        clearTimeout(attackTimeout);
+        attackTimeout = null;
+
+        document.getElementById('attack-status').textContent = 'STATUS: STOPPED';
+        document.getElementById('attack-status').style.color = '#f87171';
+        document.getElementById('attack-log').innerHTML +=
+          '<br><p style="color: var(--accent-red)">$ attack stopped by user</p>';
+        document.getElementById('attack-btn').disabled = false;
+      }
+    }
+
+    // TODO: Next step is learning Python scripting to automate this instead of using a JS interval loop
+
+  </script>
+
+</body>
+
+</html>

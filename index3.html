@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Om Chandra">
+  <meta name="description" content="Password strength analyzer with hash preview, phishing email detector, and cybersecurity quiz.">
+  <title>Password Checker &amp; Phishing Detector</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style3.css">
+
+  <!-- CryptoJS for showing what the password hash looks like -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+</head>
+
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="nav-back">← back to hub</a>
+    <span class="nav-title">By Om Chandra</span>
+  </nav>
+
+  <main class="page-wrap">
+
+    <header class="page-header">
+      <h1><span class="prompt">&gt;</span> Password Strength &amp; Hashing Visualizer</h1>
+      
+    </header>
+
+    <!-- about -->
+    <section class="card">
+      <h2>📖 Password Security Overview</h2>
+      <p>
+        Modern security guidelines recommend long, memorable passphrases instead of complex, short passwords. 
+        Additionally, database administrators must cryptographically hash and salt passwords before storing them 
+        so that a database breach doesn't immediately compromise user credentials.
+      </p>
+    </section>
+
+    <!-- password checker — upgraded with NIST rules -->
+    <section class="card">
+      <h2>🔐 NIST-Aligned Strength Auditor</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+        Enter a password below to calculate its entropy score based on NIST SP 800-63B recommendations (valuing length and dictionary checks over arbitrary special-char rules).
+      </p>
+
+      <input type="password" id="password"
+        placeholder="enter a password to test...">
+
+      <div class="strength-track">
+        <div id="strengthBar"></div>
+      </div>
+
+      <div class="strength-info">
+        <span id="strengthText">Strength: None</span>
+        <span id="strengthScore"></span>
+      </div>
+
+      <div class="tips" id="tips"></div>
+    </section>
+
+    <!-- DB Hashing & Salting Visualizer -->
+    <section class="card">
+      <h2>⚡ Database Hashing &amp; Salting Visualizer</h2>
+      <p style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">
+        When websites store passwords, they should never store them in plain text! They hash them. But simple hashes are vulnerable to precomputed Rainbow Table attacks. Salting adds random data to make each hash unique.
+      </p>
+
+      <div class="hash-preview">
+        <span class="label">Raw Password:</span>
+        <span id="raw-pass-display" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text-primary);">[No password entered]</span>
+      </div>
+
+      <div class="hash-preview">
+        <span class="label">Standard SHA-256 Hash (Stored in DB without Salt):</span>
+        <span id="raw-hash-display" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent-red); word-break: break-all;">[No hash]</span>
+      </div>
+
+      <div style="margin-top: 18px; border-top: 1px solid var(--border); padding-top: 18px;">
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+          <div style="flex: 1;">
+            <label style="font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: var(--text-muted);">Cryptographic Salt (Random String):</label>
+            <input type="text" id="salt-input" style="margin-top: 4px;" readonly>
+          </div>
+          <button onclick="regenerateSalt()" style="margin-top: 0; padding: 10px 14px;">Regen Salt</button>
+        </div>
+
+        <button class="primary" onclick="simulateSalting()" style="width: 100%; margin-top: 14px;">Simulate Salted Hashing</button>
+      </div>
+
+      <div class="hash-preview" id="salted-result-box" style="display: none; margin-top: 18px;">
+        <span class="label">Salted String (Salt + Password):</span>
+        <span id="salted-string-display" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-amber); word-break: break-all; display: block; margin-bottom: 8px;"></span>
+        
+        <span class="label">Salted SHA-256 Hash (Stored in secure DB):</span>
+        <span id="salted-hash-display" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--accent-green); word-break: break-all;"></span>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+  // NIST guidelines SP 800-63B say length is king, complexity is secondary.
+  // Complexity rules often lead to predictable human patterns (like capitalizing the first letter and adding '!' at the end).
+  const passwordInput = document.getElementById("password");
+
+  passwordInput.addEventListener("input", () => {
+    let pass = passwordInput.value;
+    let score = 0; // Out of 10 points
+    let tips = [];
+
+    // Update real-time hash displays below
+    if (pass.length === 0) {
+      document.getElementById("strengthBar").style.width = "0%";
+      document.getElementById("strengthText").innerHTML = "Strength: None";
+      document.getElementById("strengthScore").textContent = "";
+      document.getElementById("tips").innerHTML = "";
+      document.getElementById("raw-pass-display").textContent = "[No password entered]";
+      document.getElementById("raw-hash-display").textContent = "[No hash]";
+      document.getElementById("salted-result-box").style.display = "none";
+      return;
+    }
+
+    document.getElementById("raw-pass-display").textContent = pass;
+    document.getElementById("raw-hash-display").textContent = CryptoJS.SHA256(pass).toString();
+
+    // NIST scoring rules: Length rules
+    if (pass.length >= 8) score += 2;
+    if (pass.length >= 12) score += 3; // Passphrases!
+    if (pass.length >= 16) score += 2; // Ultra long!
+
+    // Character variety points (NIST still values it, but length is the focus)
+    if (/[a-z]/.test(pass)) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+
+    // Common passwords check penalty (NIST explicitly advises checking dictionary lists)
+    const common = ['password', '123456', 'qwerty', 'admin', 'letmein', 'welcome', 'monkey', 'dragon', 'master', 'abc123', 'password123'];
+    if (common.some(p => pass.toLowerCase().includes(p))) {
+      score = Math.max(1, score - 5);
+      tips.push("contains a highly guessable dictionary word/pattern!");
+    }
+
+    // Sequence / repetition penalties
+    if (/(.)\1{2,}/.test(pass)) {
+      score = Math.max(1, score - 1);
+      tips.push("avoid repeating character sequences (e.g., 'aaa')");
+    }
+    if (/012|123|234|345|456|567|678|789/.test(pass)) {
+      score = Math.max(1, score - 1);
+      tips.push("sequential numbers are easy for dictionary attacks");
+    }
+
+    // Tip suggestions
+    if (pass.length < 8) {
+      tips.push("NIST guidelines recommend at least 8 characters (ideally 12+).");
+    } else if (pass.length >= 12) {
+      tips.push("Great! Length of 12+ characters complies with strong passphrase standards.");
+    }
+    if (!/[^A-Za-z0-9]/.test(pass)) {
+      tips.push("Optional: Mix in special characters for additional entropy.");
+    }
+
+    // Map score out of 10 to UI strength bar
+    let bar = document.getElementById("strengthBar");
+    let label, color, width;
+
+    if (score <= 3) { label = "Weak (Fails NIST baseline)"; color = "#f87171"; width = "25%"; }
+    else if (score <= 5) { label = "Fair"; color = "#fbbf24"; width = "50%"; }
+    else if (score <= 7) { label = "Good"; color = "#38bdf8"; width = "75%"; }
+    else { label = "Strong (NIST SP 800-63B Compliant)"; color = "#4ade80"; width = "100%"; }
+
+    bar.style.width = width;
+    bar.style.background = color;
+    document.getElementById("strengthText").innerHTML = "Strength: " + label;
+    document.getElementById("strengthScore").textContent = score + "/10 pts";
+
+    // Show top tips
+    document.getElementById("tips").innerHTML =
+      tips.slice(0, 3).map(t => "ℹ " + t).join("<br>");
+  });
+
+  // Generate random salt on load
+  function regenerateSalt() {
+    const salt = Math.random().toString(36).substring(2, 10);
+    document.getElementById("salt-input").value = salt;
+  }
+
+  // Demonstrating why salting prevents attackers from using precomputed Rainbow Tables to crack hashes.
+  // If attackers have a database of precomputed SHA-256 hashes for common passwords, they can look up plaintexts.
+  // Salting breaks this because a unique random string is appended before hashing, meaning standard lists won't match!
+  function simulateSalting() {
+    let pass = document.getElementById("password").value;
+    if (!pass) {
+      alert("enter a password first in the auditor input");
+      return;
+    }
+    let salt = document.getElementById("salt-input").value;
+    
+    let saltedString = salt + pass;
+    let saltedHash = CryptoJS.SHA256(saltedString).toString();
+
+    document.getElementById("salted-string-display").textContent = `${salt} + ${pass}`;
+    document.getElementById("salted-hash-display").textContent = saltedHash;
+    document.getElementById("salted-result-box").style.display = "block";
+  }
+
+  // Initialize salt
+  regenerateSalt();
+  </script>
+
+</body>
+</html>

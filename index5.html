@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Om Chandra">
+  <meta name="description" content="Educational port scanner simulator demonstrating common network ports.">
+  <title>Port Scanner Simulator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style5.css">
+</head>
+
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="nav-back">← back to hub</a>
+    <span class="nav-title"> By Om Chandra 
+    </span>
+  </nav>
+
+  <main class="page-wrap">
+
+    <header class="page-header">
+      <h1><span class="prompt">&gt;</span> Nmap Port Scan Terminal Log Viewer</h1>
+    
+    </header>
+
+    <!-- input -->
+    <div class="input-row">
+      <input type="text" id="target"
+        placeholder="enter website or IP address">
+      <button onclick="scanPorts()">scan target</button>
+    </div>
+
+    <!-- terminal output -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="label">nmap-scan-terminal</span>
+      </div>
+      <div class="terminal-body" id="result" style="height: 320px; overflow-y: auto;">
+        <p style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace;"></p>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+  // JSON array representing ports on target machine
+  // Nmap probes these target ports to check for replies (syn/ack)
+  const nmapPorts = [
+    { "port": 21, "service": "FTP", "status": "closed", "banner": "" },
+    { "port": 22, "service": "SSH", "status": "open", "banner": "OpenSSH 8.2p1 Ubuntu 4ubuntu0.5" },
+    { "port": 23, "service": "Telnet", "status": "closed", "banner": "" },
+    { "port": 25, "service": "SMTP", "status": "closed", "banner": "" },
+    { "port": 53, "service": "DNS", "status": "closed", "banner": "" },
+    { "port": 80, "service": "HTTP", "status": "open", "banner": "nginx 1.18.0" },
+    { "port": 110, "service": "POP3", "status": "closed", "banner": "" },
+    { "port": 143, "service": "IMAP", "status": "closed", "banner": "" },
+    { "port": 443, "service": "HTTPS", "status": "open", "banner": "nginx 1.18.0 (SSL certificate valid)" },
+    { "port": 3306, "service": "MySQL", "status": "open", "banner": "MySQL 5.7.33-0ubuntu0.20.04.1-log" },
+    { "port": 8080, "service": "HTTP-Proxy", "status": "closed", "banner": "" }
+  ];
+
+  let scanTimeout = null;
+
+  function scanPorts() {
+    const target = document.getElementById("target").value;
+
+    if (target.trim() === "") {
+      alert("Please enter a target IP or domain.");
+      return;
+    }
+
+    if (scanTimeout) {
+      clearTimeout(scanTimeout);
+    }
+
+    const result = document.getElementById("result");
+    result.innerHTML = '<p style="color: var(--accent-amber); font-family: \'JetBrains Mono\', monospace;">$ initiating nmap stealth scan (-sS -sV) against ' + target + '...</p>';
+
+    // Build the Nmap log lines dynamically from our JSON port array
+    const scanLines = [
+      `Starting Nmap 7.92 ( https://nmap.org ) at 2026-06-25 11:41 EST`,
+      `Nmap scan report for ${target} (${getRandomIP()})`,
+      `Host is up (0.0048s latency).`,
+    ];
+
+    // Filter out closed ports count for summary info
+    const closedPorts = nmapPorts.filter(p => p.status === "closed");
+    scanLines.push(`Not shown: ${closedPorts.length} closed tcp ports (reset)`);
+    
+    // Header for active TCP ports table
+    scanLines.push(`<span style="color: var(--accent-blue); font-weight: bold;">PORT      STATE  SERVICE    VERSION</span>`);
+
+    // Parse the JSON array and print out open targets line-by-line
+    nmapPorts.forEach(p => {
+      if (p.status === "open") {
+        const portStr = `${p.port}/tcp`.padEnd(9);
+        const stateStr = p.status.padEnd(7);
+        const svcStr = p.service.toLowerCase().padEnd(10);
+        
+        // Highlight open targets in terminal green
+        scanLines.push(`<span style="color: var(--accent-green);">${portStr} ${stateStr} ${svcStr} ${p.banner}</span>`);
+      }
+    });
+
+    scanLines.push(`Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel`);
+    scanLines.push(`<span style="color: var(--accent-green); font-weight: bold;">Nmap done: 1 IP address (1 host up) scanned in 1.45 seconds</span>`);
+
+    let index = 0;
+
+    // Output live scrolling terminal effect
+    function printLogLine() {
+      if (index >= scanLines.length) {
+        return;
+      }
+
+      result.innerHTML += `<p style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; margin-bottom: 4px; line-height: 1.4; color: var(--text-primary);">$ ${scanLines[index]}</p>`;
+      index++;
+
+      result.scrollTop = result.scrollHeight;
+      scanTimeout = setTimeout(printLogLine, 220); // 220ms delay replicates the scanner waiting for responses
+    }
+
+    // Probing delay
+    setTimeout(printLogLine, 800);
+  }
+
+  function getRandomIP() {
+    return `192.168.1.${Math.floor(Math.random() * 254) + 1}`;
+  }
+
+  // TODO: Learn how raw sockets work in Python/Scapy so I can write a real port scanner instead of this web mockup!
+  </script>
+
+</body>
+</html>

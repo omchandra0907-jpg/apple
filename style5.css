@@ -1,0 +1,221 @@
+/* ============================================
+   port scanner simulator
+   part of om's cybersec toolkit
+   
+   simulates nmap-style port scanning output
+   with a terminal-window result area
+   ============================================ */
+
+/* ---- tokens ---- */
+:root {
+  --bg-deep: #0f0f14;
+  --bg-surface: #16161e;
+  --bg-elevated: #1c1c27;
+  --border: #2a2a3a;
+  --border-accent: #38bdf8;
+  --text-primary: #e2e8f0;
+  --text-muted: #64748b;
+  --accent-blue: #38bdf8;
+  --accent-green: #4ade80;
+  --accent-red: #f87171;
+  --accent-amber: #fbbf24;
+}
+
+/* ---- reset ---- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(circle, #1a1a2e 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ---- nav ---- */
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.nav-back {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: color 0.2s;
+}
+
+.nav-back:hover {
+  color: var(--accent-blue);
+}
+
+.nav-title {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-green);
+  font-size: 0.82rem;
+}
+
+/* ---- page layout ---- */
+.page-wrap {
+  width: 92%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 36px 0 60px;
+}
+
+.page-header {
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-header h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.page-header h1 .prompt {
+  color: var(--accent-blue);
+}
+
+.page-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* ---- input row ---- */
+/* side-by-side input + button, like a CLI prompt */
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-row input:focus {
+  border-color: var(--accent-blue);
+}
+
+.input-row button {
+  padding: 10px 22px;
+  background: var(--accent-blue);
+  color: #0f0f14;
+  border: 1px solid var(--accent-blue);
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.input-row button:hover {
+  background: #2ca8e0;
+}
+
+/* ---- terminal output window ---- */
+/* styled to look like a real terminal emulator */
+.terminal {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-bar .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.terminal-bar .dot.red { background: #f87171; }
+.terminal-bar .dot.yellow { background: #fbbf24; }
+.terminal-bar .dot.green { background: #4ade80; }
+
+.terminal-bar .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.terminal-body {
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.8;
+  min-height: 240px;
+}
+
+/* port status colors */
+.terminal-body .port-open {
+  color: var(--accent-green);
+}
+
+.terminal-body .port-closed {
+  color: var(--accent-red);
+}
+
+.terminal-body h3 {
+  font-size: 0.9rem;
+  color: var(--accent-blue);
+  margin-bottom: 10px;
+}
+
+.terminal-body p {
+  margin-bottom: 4px;
+}
+
+.terminal-body .note {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---- footer ---- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 20px 28px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+}
